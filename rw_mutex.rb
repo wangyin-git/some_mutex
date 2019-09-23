@@ -59,9 +59,13 @@ class RWMutex
           @cond.wait(@mutex)
         end
       end
+      if owned? && @status == :locked_for_write
+        @status = :locked_for_read
+        @cond.broadcast
+      else
+        @status = :locked_for_read
+      end
       @lock_count[Thread.current] += 1
-      @status                     = :locked_for_read
-      @cond.broadcast
     end
   end
 
