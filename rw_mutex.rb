@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require_relative 'reentrant_mutex'
 
 class RWMutex
@@ -59,13 +57,13 @@ class RWMutex
           @cond.wait(@mutex)
         end
       end
-      if owned? && @status == :locked_for_write
-        @status = :locked_for_read
-        @cond.broadcast
-      else
-        @status = :locked_for_read
-      end
+      tmp_status                  = @status
+      @status                     = :locked_for_read
       @lock_count[Thread.current] += 1
+      if owned? && tmp_status == :locked_for_write
+        @cond.broadcast
+      end
+      return self
     end
   end
 
@@ -74,8 +72,9 @@ class RWMutex
       until @status == :unlocked || (owned? && @status == :locked_for_write)
         @cond.wait(@mutex)
       end
-      @lock_count[Thread.current] += 1
       @status                     = :locked_for_write
+      @lock_count[Thread.current] += 1
+      return self
     end
   end
 
